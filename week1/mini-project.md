@@ -23,7 +23,7 @@ The following policy is scoped to one bucket. Replace `YOUR_BUCKET_NAME` with th
       "Sid": "ListBucket",
       "Effect": "Allow",
       "Action": ["s3:ListBucket"],
-      "Resource": "arn:aws:s3:::YOUR_BUCKET_NAME"
+      "Resource": "arn:aws:s3:::mimi-week1-aws-project-2026"
     },
     {
       "Sid": "ManageObjects",
@@ -33,7 +33,7 @@ The following policy is scoped to one bucket. Replace `YOUR_BUCKET_NAME` with th
         "s3:PutObject",
         "s3:DeleteObject"
       ],
-      "Resource": "arn:aws:s3:::YOUR_BUCKET_NAME/*"
+      "Resource": "arn:aws:s3:::mimi-week1-aws-project-2026/*"
     }
   ]
 }
@@ -46,8 +46,8 @@ Choose a globally unique bucket name and create the bucket in the required AWS R
 Example AWS CLI commands:
 
 ```bash
-aws s3 mb s3://YOUR_BUCKET_NAME --region YOUR_REGION
-aws s3 sync ./mini-project-portfolio s3://YOUR_BUCKET_NAME
+aws s3 mb s3://YOUR_BUCKET_mimi-week1-aws-project-2026 --region YOUR_REGION
+aws s3 sync ./mini-project-portfolio s3://mimi-week1-aws-project-2026
 ```
 
 ## Part 3 — Public-access test
