@@ -7,7 +7,7 @@
       "Action": [
         "s3:ListBucket"
       ],
-      "Resource": "arn:aws:s3:::YOUR_BUCKET_MAMASHRI GUPTA"
+      "Resource": "arn:aws:s3:::mimi-week1-aws-project-2026"
     },
     {
       "Sid": "ManageObjects",
@@ -17,7 +17,7 @@
         "s3:PutObject",
         "s3:DeleteObject"
       ],
-      "Resource": "arn:aws:s3:::YOUR_BUCKET_MAMASHI GUPTA/*"
+      "Resource": "arn:aws:s3:::mimi-week1-aws-project-2026/*"
     }
   ]
 }
