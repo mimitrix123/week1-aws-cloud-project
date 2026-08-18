@@ -13,40 +13,20 @@ The Week 1 mini project asks for an IAM user with specific permissions, an S3 bu
 
 ### Example least-privilege policy
 
-The following policy is scoped to one bucket. Replace `YOUR_BUCKET_NAME` with the bucket name before use.
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "ListBucket",
-      "Effect": "Allow",
-      "Action": ["s3:ListBucket"],
-      "Resource": "arn:aws:s3:::mimi-week1-aws-project-2026"
-    },
-    {
-      "Sid": "ManageObjects",
-      "Effect": "Allow",
-      "Action": [
-        "s3:GetObject",
-        "s3:PutObject",
-        "s3:DeleteObject"
-      ],
-      "Resource": "arn:aws:s3:::mimi-week1-aws-project-2026/*"
-    }
-  ]
-}
-```
+The policy in `iam-user-policy.json` is scoped to the Week 1 bucket.
 
 ## Part 2 — Create an S3 bucket
 
-Choose a globally unique bucket name and create the bucket in the required AWS Region. Upload the static website files from `mini-project-portfolio/`.
+For this project, use the AWS Mumbai Region:
+
+- **Region:** Asia Pacific (Mumbai)
+- **Region code:** `ap-south-1`
+- **Bucket:** `mimi-week1-aws-project-2026`
 
 Example AWS CLI commands:
 
 ```bash
-aws s3 mb s3://YOUR_BUCKET_mimi-week1-aws-project-2026 --region YOUR_REGION
+aws s3 mb s3://mimi-week1-aws-project-2026 --region ap-south-1
 aws s3 sync ./mini-project-portfolio s3://mimi-week1-aws-project-2026
 ```
 
@@ -54,15 +34,15 @@ aws s3 sync ./mini-project-portfolio s3://mimi-week1-aws-project-2026
 
 The assignment specifically asks students to configure public access and test a bucket policy. fileciteturn0file0L24-L30
 
-For the learning exercise only, use the S3 bucket policy in `s3-bucket-policy.json` after replacing the bucket name. Test access to the uploaded static files.
+For the learning exercise only, use the S3 bucket policy in `s3-bucket-policy.json`. Test access to the uploaded static files.
 
 **Important:** public S3 access can expose files to the internet. After completing the test, remove the public policy and re-enable S3 Block Public Access unless public hosting is genuinely required.
 
 ## Part 4 — Verify
 
 ```bash
-aws s3 ls s3://YOUR_BUCKET_NAME
-aws s3 sync s3://YOUR_BUCKET_NAME ./downloaded-site
+aws s3 ls s3://mimi-week1-aws-project-2026 --region ap-south-1
+aws s3 sync s3://mimi-week1-aws-project-2026 ./downloaded-site
 ```
 
 Confirm that the expected static files were uploaded and can be retrieved.
