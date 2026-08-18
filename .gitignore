@@ -1,0 +1,21 @@
+# AWS credentials and private keys
+*.pem
+*.key
+.aws/
+credentials
+config
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp

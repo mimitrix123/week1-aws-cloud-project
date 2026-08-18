@@ -1,0 +1,23 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f7fb;
+  color: #172033;
+}
+.container {
+  width: min(900px, 90%);
+  margin: 0 auto;
+  padding: 90px 0;
+}
+.tag { font-weight: 700; letter-spacing: 2px; }
+h1 { font-size: clamp(2.5rem, 7vw, 5rem); margin: 12px 0; }
+.lead { font-size: 1.2rem; line-height: 1.7; max-width: 700px; }
+.card {
+  margin-top: 35px;
+  padding: 28px;
+  background: white;
+  border-radius: 18px;
+  box-shadow: 0 10px 35px rgba(0,0,0,.08);
+}
+li { margin: 12px 0; }
