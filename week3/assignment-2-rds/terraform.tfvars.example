@@ -1,0 +1,14 @@
+aws_region                    = "ap-south-1"
+vpc_id                        = "vpc-xxxxxxxx"
+private_subnet_id_1           = "subnet-xxxxxxxx"
+private_subnet_id_2           = "subnet-yyyyyyyy"
+application_subnet_id         = "subnet-xxxxxxxx"
+application_security_group_id = "sg-xxxxxxxx"
+application_ami_id            = "ami-xxxxxxxx"
+application_instance_type     = "t3.micro"
+db_instance_class             = "db.t3.micro"
+allocated_storage             = 20
+max_allocated_storage         = 50
+db_name                       = "contactdb"
+db_username                   = "appadmin"
+# Do not commit a real password. Set TF_VAR_db_password in your shell.

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Serverless Contact Form</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 680px; margin: 40px auto; padding: 0 20px; }
+    form { display: grid; gap: 12px; }
+    input, textarea, button { font: inherit; padding: 10px; }
+    textarea { min-height: 150px; }
+    button { cursor: pointer; }
+    #status { margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <h1>Contact Us</h1>
+  <p>Week 3 AWS Serverless Contact Form — Lambda + API Gateway.</p>
+
+  <form id="contact-form">
+    <label>Name <input name="name" required></label>
+    <label>Email <input name="email" type="email" required></label>
+    <label>Message <textarea name="message" required></textarea></label>
+    <button type="submit">Send message</button>
+  </form>
+
+  <p id="status" role="status"></p>
+
+  <script>
+    // Replace this after `terraform apply` with the contact_endpoint output.
+    const API_ENDPOINT = "REPLACE_WITH_TERRAFORM_CONTACT_ENDPOINT";
+
+    const form = document.getElementById("contact-form");
+    const status = document.getElementById("status");
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      status.textContent = "Sending...";
+
+      const formData = new FormData(form);
+      const payload = Object.fromEntries(formData.entries());
+
+      try {
+        const response = await fetch(API_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const result = await response.json();
+        status.textContent = result.message || "Request completed.";
+        if (response.ok) form.reset();
+      } catch (error) {
+        console.error(error);
+        status.textContent = "Could not reach the API. Check the endpoint.";
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,61 +1,64 @@
-# Week 1 AWS Cloud Computing Project
+# Week 1 & Week 3 AWS Cloud Computing Projects
 
-## BeeSkilled — Cloud Computing with AWS
+This repository contains completed AWS cloud-computing coursework. Week 1 covers AWS basics, IAM, EC2, S3, and a static-site mini project. Week 3 extends the work into networking, databases, and serverless computing.
 
-This repository contains the completed Week 1 assignment work for **Introduction to Cloud Computing & AWS Basics**.
+## Week 1
 
-The assignment covers AWS account setup, IAM, core services (EC2, S3, RDS, Lambda), and an IAM & S3 hands-on mini project.
+The Week 1 assignment work covers AWS account setup, IAM, core services (EC2, S3, RDS, Lambda), and an IAM & S3 hands-on mini project.
 
-## Completed work
+See the existing `week1/`, `assignment-1-ec2/`, `assignment-2-s3/`, and `mini-project-portfolio/` directories.
 
-### Assignment 1 — AWS Account & IAM
+## Week 3 — Networking, Databases & Serverless Computing
 
-- AWS account setup procedure documented.
-- IAM user and permission approach documented.
-- Security checklist included.
-- No AWS credentials are stored in this repository.
+The supplied Week 3 brief covers Amazon VPC, subnets, route tables, security groups, AWS RDS MySQL connectivity, AWS Lambda, API Gateway, and CloudWatch.
 
-### Assignment 2 — Core AWS Services
+### Assignment 1 — VPC with Public & Private Subnets
 
-A summary report covers:
+Implemented with Terraform:
 
-- **EC2** — virtual compute.
-- **S3** — object storage.
-- **RDS** — managed relational databases.
-- **Lambda** — serverless function execution.
+- VPC with public and private subnets
+- Internet Gateway and NAT Gateway
+- Public and private route tables
+- Public and private EC2 instances
+- Security groups with restricted SSH and application traffic
 
-See [`week1/core-aws-services.md`](week1/core-aws-services.md).
+See [`week3/assignment-1-vpc/`](week3/assignment-1-vpc/).
 
-### Mini Project — IAM & S3
+### Assignment 2 — MySQL RDS + EC2 Connectivity
 
-The mini project requires an IAM user with specific permissions, an S3 bucket containing static files, and a public-access test.
+Implemented with Terraform:
 
-See [`week1/mini-project.md`](week1/mini-project.md) for the complete procedure and [`week1/iam-user-policy.json`](week1/iam-user-policy.json) for the IAM example.
+- Private MySQL RDS instance
+- Multi-AZ DB subnet group
+- RDS security group allowing MySQL from the application EC2 security group
+- Flask sample application hosted on EC2
+- Application health endpoint that verifies database connectivity
 
-The static website is available in the repository root as `index.html` and `style.css` and can be uploaded to S3 for the exercise.
+See [`week3/assignment-2-rds/`](week3/assignment-2-rds/).
 
-## Important security note
+### Mini Project — Serverless Contact Form
 
-Public S3 access is included only because the course exercise asks for a public-access test. After testing, remove the public policy and re-enable S3 Block Public Access. Never commit AWS access keys, secret keys, passwords, or other credentials.
+Implemented with Terraform and Python:
 
-## Repository structure
+- AWS Lambda function processes contact form data
+- API Gateway HTTP API exposes `POST /contact`
+- Browser frontend included
+- `curl`/Postman testing instructions included
+- CloudWatch log group configured
+- Python unit tests included
 
-```text
-.
-├── assignment-1-ec2/
-├── assignment-2-s3/
-├── mini-project-portfolio/
-├── week1/
-│   ├── README.md
-│   ├── core-aws-services.md
-│   ├── mini-project.md
-│   ├── iam-user-policy.json
-│   └── s3-bucket-policy.json
-├── index.html
-├── style.css
-└── README.md
-```
+See [`week3/mini-project-serverless-contact-form/`](week3/mini-project-serverless-contact-form/).
+
+## Security
+
+Never commit AWS access keys, secret keys, passwords, `.pem` files, or Terraform state. Use AWS CLI credential configuration or environment variables. RDS is intentionally private in the Week 3 implementation.
+
+The Week 3 mini project uses `Access-Control-Allow-Origin: *` for classroom simplicity. Restrict CORS origins before production use.
+
+## Region
+
+The project examples use **AWS Mumbai (`ap-south-1`)**, matching the existing Week 1 repository configuration.
 
 ## GitHub
 
-This project uses the `main` branch.
+The project uses the `main` branch.

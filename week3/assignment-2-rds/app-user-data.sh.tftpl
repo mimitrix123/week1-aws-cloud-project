@@ -1,0 +1,65 @@
+#!/bin/bash
+set -e
+apt-get update -y
+apt-get install -y python3 python3-pip
+python3 -m pip install --break-system-packages flask mysql-connector-python
+mkdir -p /opt/week3-rds-app
+cat > /opt/week3-rds-app/app.py <<'PY'
+import os
+from flask import Flask, jsonify
+import mysql.connector
+
+app = Flask(__name__)
+
+
+def get_db():
+    return mysql.connector.connect(
+        host=os.environ["DB_HOST"],
+        port=3306,
+        user=os.environ["DB_USER"],
+        password=os.environ["DB_PASSWORD"],
+        database=os.environ["DB_NAME"],
+        connection_timeout=5,
+    )
+
+
+@app.get("/")
+def health():
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1")
+        result = cursor.fetchone()[0]
+        cursor.close()
+        conn.close()
+        return jsonify({"application": "Week 3 RDS sample app", "database_connection": result == 1})
+    except Exception as exc:
+        return jsonify({"application": "Week 3 RDS sample app", "database_connection": False, "error": str(exc)}), 503
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=80)
+PY
+
+cat > /etc/systemd/system/week3-rds-app.service <<'SERVICE'
+[Unit]
+Description=Week 3 RDS Sample Flask Application
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/week3-rds-app
+Environment="DB_HOST=${db_host}"
+Environment="DB_USER=${db_username}"
+Environment="DB_PASSWORD=${db_password}"
+Environment="DB_NAME=${db_name}"
+ExecStart=/usr/bin/python3 /opt/week3-rds-app/app.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+
+systemctl daemon-reload
+systemctl enable --now week3-rds-app.service

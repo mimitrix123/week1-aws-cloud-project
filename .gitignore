@@ -5,6 +5,22 @@
 credentials
 config
 
+# Terraform
+**/.terraform/
+**/.terraform.lock.hcl
+**/*.tfstate
+**/*.tfstate.*
+**/terraform.tfvars
+**/*.tfplan
+**/*.zip
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
 # OS files
 .DS_Store
 Thumbs.db
@@ -13,9 +29,8 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+.idea/
 
-# Logs
+# Logs / temporary files
 *.log
-
-# Temporary files
 *.tmp
