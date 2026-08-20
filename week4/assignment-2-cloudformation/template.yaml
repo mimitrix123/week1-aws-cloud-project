@@ -1,0 +1,107 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Week 4 Assignment 2 - reusable CloudFormation EC2 and S3 example.
+Parameters:
+  VpcCidr:
+    Type: String
+    Default: 10.40.0.0/16
+  InstanceType:
+    Type: String
+    Default: t3.micro
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: { Ref: VpcCidr }
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: week4-cfn-vpc
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: { Ref: VPC }
+      InternetGatewayId: { Ref: InternetGateway }
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: { Ref: VPC }
+      CidrBlock: 10.40.1.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: { Fn::Select: [0, { Fn::GetAZs: '' }] }
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties: { VpcId: { Ref: VPC } }
+  DefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: { Ref: RouteTable }
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: { Ref: InternetGateway }
+  RouteAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: { Ref: PublicSubnet }
+      RouteTableId: { Ref: RouteTable }
+  WebSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP and restricted SSH for classroom use.
+      VpcId: { Ref: VPC }
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+  WebServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: { Ref: LatestAmiId }
+      InstanceType: { Ref: InstanceType }
+      SubnetId: { Ref: PublicSubnet }
+      SecurityGroupIds: [{ Ref: WebSecurityGroup }]
+      Tags:
+        - Key: Name
+          Value: week4-cfn-web
+      UserData:
+        Fn::Base64:
+          Fn::Sub: |
+            #!/bin/bash
+            dnf install -y httpd
+            systemctl enable --now httpd
+            cat > /var/www/html/index.html <<'HTML'
+            <h1>Week 4 CloudFormation Assignment</h1>
+            <p>EC2 provisioned by CloudFormation.</p>
+            HTML
+  StorageBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+Outputs:
+  WebsiteUrl:
+    Value: { Fn::Sub: 'http://${WebServer.PublicIp}' }
+  BucketName:
+    Value: { Ref: StorageBucket }

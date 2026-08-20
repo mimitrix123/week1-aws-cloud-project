@@ -1,0 +1,15 @@
+version: 0.2
+phases:
+  install:
+    commands:
+      - echo "Installing validation dependencies"
+  pre_build:
+    commands:
+      - python --version
+      - python scripts/validate_week4.py
+  build:
+    commands:
+      - echo "Week 4 CI validation completed"
+artifacts:
+  files:
+    - '**/*'

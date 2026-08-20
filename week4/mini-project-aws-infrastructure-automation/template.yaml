@@ -1,0 +1,317 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Week 4 capstone - automated AWS infrastructure with ALB, Auto Scaling, RDS, S3 and optional Route 53.
+Parameters:
+  InstanceType:
+    Type: String
+    Default: t3.micro
+  MinSize:
+    Type: Number
+    Default: 2
+    MinValue: 1
+  MaxSize:
+    Type: Number
+    Default: 4
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+  HostedZoneId:
+    Type: String
+    Default: ''
+  RecordName:
+    Type: String
+    Default: ''
+Conditions:
+  HasDnsInputs:
+    Fn::And:
+      - Fn::Not:
+          - Fn::Equals:
+              - { Ref: HostedZoneId }
+              - ''
+      - Fn::Not:
+          - Fn::Equals:
+              - { Ref: RecordName }
+              - ''
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.60.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: week4-capstone-vpc
+  IGW:
+    Type: AWS::EC2::InternetGateway
+  IGWAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: { Ref: VPC }
+      InternetGatewayId: { Ref: IGW }
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: { Ref: VPC }
+      CidrBlock: 10.60.1.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone:
+        Fn::Select: [0, { Fn::GetAZs: '' }]
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: { Ref: VPC }
+      CidrBlock: 10.60.2.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone:
+        Fn::Select: [1, { Fn::GetAZs: '' }]
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: { Ref: VPC }
+      CidrBlock: 10.60.11.0/24
+      AvailabilityZone:
+        Fn::Select: [0, { Fn::GetAZs: '' }]
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: { Ref: VPC }
+      CidrBlock: 10.60.12.0/24
+      AvailabilityZone:
+        Fn::Select: [1, { Fn::GetAZs: '' }]
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: { Ref: VPC }
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: IGWAttachment
+    Properties:
+      RouteTableId: { Ref: PublicRouteTable }
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: { Ref: IGW }
+  PublicAssoc1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: { Ref: PublicSubnet1 }
+      RouteTableId: { Ref: PublicRouteTable }
+  PublicAssoc2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: { Ref: PublicSubnet2 }
+      RouteTableId: { Ref: PublicRouteTable }
+  NatEip:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    DependsOn: IGWAttachment
+    Properties:
+      AllocationId:
+        Fn::GetAtt: [NatEip, AllocationId]
+      SubnetId: { Ref: PublicSubnet1 }
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: { Ref: VPC }
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: { Ref: PrivateRouteTable }
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: { Ref: NatGateway }
+  PrivateAssoc1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: { Ref: PrivateSubnet1 }
+      RouteTableId: { Ref: PrivateRouteTable }
+  PrivateAssoc2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: { Ref: PrivateSubnet2 }
+      RouteTableId: { Ref: PrivateRouteTable }
+  AlbSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Public HTTP access to the ALB.
+      VpcId: { Ref: VPC }
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+  AppSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Application traffic only from ALB.
+      VpcId: { Ref: VPC }
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: { Ref: AlbSG }
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+  RdsSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: MySQL access only from application instances.
+      VpcId: { Ref: VPC }
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: { Ref: AppSG }
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [ec2.amazonaws.com]
+            Action: ['sts:AssumeRole']
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [{ Ref: InstanceRole }]
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        ImageId: { Ref: LatestAmiId }
+        InstanceType: { Ref: InstanceType }
+        SecurityGroupIds: [{ Ref: AppSG }]
+        IamInstanceProfile:
+          Name: { Ref: InstanceProfile }
+        UserData:
+          Fn::Base64:
+            Fn::Sub: |
+              #!/bin/bash
+              dnf install -y httpd
+              systemctl enable --now httpd
+              TOKEN=$(curl -sS -X PUT -H 'X-aws-ec2-metadata-token-ttl-seconds: 21600' http://169.254.169.254/latest/api/token)
+              ID=$(curl -sS -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
+              echo "<html><body><h1>Week 4 AWS Capstone</h1><p>Instance: $ID</p><p>ALB + Auto Scaling + private RDS + S3</p></body></html>" > /var/www/html/index.html
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: { Ref: VPC }
+      Port: 80
+      Protocol: HTTP
+      TargetType: instance
+      HealthCheckPath: /
+      Matcher:
+        HttpCode: '200-399'
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      SecurityGroups: [{ Ref: AlbSG }]
+      Subnets: [{ Ref: PublicSubnet1 }, { Ref: PublicSubnet2 }]
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: { Ref: LoadBalancer }
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: { Ref: TargetGroup }
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      MinSize: { Ref: MinSize }
+      MaxSize: { Ref: MaxSize }
+      DesiredCapacity: { Ref: MinSize }
+      VPCZoneIdentifier: [{ Ref: PrivateSubnet1 }, { Ref: PrivateSubnet2 }]
+      TargetGroupARNs: [{ Ref: TargetGroup }]
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 180
+      LaunchTemplate:
+        LaunchTemplateId: { Ref: LaunchTemplate }
+        Version:
+          Fn::GetAtt: [LaunchTemplate, LatestVersionNumber]
+  ScalingPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: { Ref: AutoScalingGroup }
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: 60
+  DbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Private subnets for capstone RDS.
+      SubnetIds: [{ Ref: PrivateSubnet1 }, { Ref: PrivateSubnet2 }]
+  Database:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      Engine: mysql
+      DBInstanceClass: db.t3.micro
+      AllocatedStorage: 20
+      StorageType: gp3
+      DBName: appdb
+      MasterUsername: appadmin
+      ManageMasterUserPassword: true
+      DBSubnetGroupName: { Ref: DbSubnetGroup }
+      VPCSecurityGroups: [{ Ref: RdsSG }]
+      PubliclyAccessible: false
+      BackupRetentionPeriod: 1
+      StorageEncrypted: true
+      MultiAZ: false
+  StorageBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+  DnsRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: HasDnsInputs
+    Properties:
+      HostedZoneId: { Ref: HostedZoneId }
+      Name: { Ref: RecordName }
+      Type: A
+      AliasTarget:
+        DNSName:
+          Fn::GetAtt: [LoadBalancer, DNSName]
+        HostedZoneId:
+          Fn::GetAtt: [LoadBalancer, CanonicalHostedZoneID]
+        EvaluateTargetHealth: true
+Outputs:
+  LoadBalancerUrl:
+    Value:
+      Fn::Sub: 'http://${LoadBalancer.DNSName}'
+  LoadBalancerDnsName:
+    Value:
+      Fn::GetAtt: [LoadBalancer, DNSName]
+  DatabaseEndpoint:
+    Value:
+      Fn::GetAtt: [Database, Endpoint.Address]
+  StorageBucketName:
+    Value: { Ref: StorageBucket }

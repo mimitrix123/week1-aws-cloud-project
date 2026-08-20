@@ -1,0 +1,127 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Week 4 Assignment 5 - CodePipeline with GitHub through CodeConnections and CodeBuild.
+Parameters:
+  ConnectionArn:
+    Type: String
+    Description: ARN of an authorized AWS CodeConnections connection to GitHub.
+  FullRepositoryId:
+    Type: String
+    Description: GitHub repository in owner/name format.
+  BranchName:
+    Type: String
+    Default: main
+  BuildImage:
+    Type: String
+    Default: aws/codebuild/standard:7.0
+Resources:
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: [codebuild.amazonaws.com] }
+            Action: ['sts:AssumeRole']
+      Policies:
+        - PolicyName: week4-codebuild
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['logs:CreateLogGroup','logs:CreateLogStream','logs:PutLogEvents']
+                Resource: '*'
+              - Effect: Allow
+                Action: ['s3:GetObject','s3:GetObjectVersion','s3:PutObject','s3:GetBucketVersioning']
+                Resource: '*'
+  PipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: [codepipeline.amazonaws.com] }
+            Action: ['sts:AssumeRole']
+      Policies:
+        - PolicyName: week4-codepipeline
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['s3:GetObject','s3:GetObjectVersion','s3:PutObject','s3:GetBucketVersioning']
+                Resource: '*'
+              - Effect: Allow
+                Action: ['codeconnections:UseConnection']
+                Resource: { Ref: ConnectionArn }
+              - Effect: Allow
+                Action: ['codebuild:StartBuild','codebuild:BatchGetBuilds']
+                Resource: { Fn::GetAtt: [BuildProject, Arn] }
+  BuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      ServiceRole: { Fn::GetAtt: [CodeBuildRole, Arn] }
+      Artifacts: { Type: CODEPIPELINE }
+      Source: { Type: CODEPIPELINE }
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: { Ref: BuildImage }
+        Type: LINUX_CONTAINER
+        PrivilegedMode: false
+      TimeoutInMinutes: 10
+  Pipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      RoleArn: { Fn::GetAtt: [PipelineRole, Arn] }
+      ArtifactStore:
+        Type: S3
+        Location: { Ref: ArtifactBucket }
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: GitHubSource
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Provider: CodeStarSourceConnection
+                Version: '1'
+              Configuration:
+                ConnectionArn: { Ref: ConnectionArn }
+                FullRepositoryId: { Ref: FullRepositoryId }
+                BranchName: { Ref: BranchName }
+                OutputArtifactFormat: CODE_ZIP
+              OutputArtifacts:
+                - Name: SourceOutput
+        - Name: Build
+          Actions:
+            - Name: Validate
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              Configuration:
+                ProjectName: { Ref: BuildProject }
+              InputArtifacts:
+                - Name: SourceOutput
+              OutputArtifacts:
+                - Name: BuildOutput
+Outputs:
+  PipelineName:
+    Value: { Ref: Pipeline }
+  ArtifactBucket:
+    Value: { Ref: ArtifactBucket }

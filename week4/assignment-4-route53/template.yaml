@@ -1,0 +1,29 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Week 4 Assignment 4 - Route 53 alias record for an ALB.
+Parameters:
+  HostedZoneId:
+    Type: String
+    Description: Existing Route 53 hosted zone ID without /hostedzone/ prefix.
+  RecordName:
+    Type: String
+    Description: DNS name to create, for example app.example.com.
+  LoadBalancerDnsName:
+    Type: String
+    Description: DNS name of an existing Application Load Balancer.
+  LoadBalancerHostedZoneId:
+    Type: String
+    Description: Canonical hosted zone ID returned by the ALB API.
+Resources:
+  AppRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: { Ref: HostedZoneId }
+      Name: { Ref: RecordName }
+      Type: A
+      AliasTarget:
+        DNSName: { Ref: LoadBalancerDnsName }
+        HostedZoneId: { Ref: LoadBalancerHostedZoneId }
+        EvaluateTargetHealth: true
+Outputs:
+  Record:
+    Value: { Ref: RecordName }
